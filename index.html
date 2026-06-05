@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THREE BROTHERS FRESH CHICKEN - ADVANCED POS</title>
+    <title>THREE BROTHERS FRESH CHICKEN - ULTIMATE POS</title>
     <style>
         body {
             background-color: #0f172a;
@@ -61,10 +61,6 @@
             box-sizing: border-box;
             font-size: 15px;
         }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #38bdf8;
-        }
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -78,12 +74,13 @@
             border: none;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
             margin-top: 12px;
             cursor: pointer;
         }
         .btn-success { background-color: #4ade80; color: #0f172a; }
         .btn-danger { background-color: #f87171; color: #fff; }
+        .btn-warning { background-color: #fbbf24; color: #0f172a; }
         
         .table-responsive {
             overflow-x: auto;
@@ -94,7 +91,7 @@
             border-collapse: collapse;
             font-size: 13px;
             text-align: left;
-            min-width: 600px;
+            min-width: 500px;
         }
         th, td {
             padding: 10px;
@@ -103,20 +100,48 @@
         th {
             background-color: #0f172a;
             color: #38bdf8;
-            white-space: nowrap;
         }
         tr:nth-child(even) { background-color: #1e293b; }
-        tr:hover { background-color: #24344d; }
 
-        .invoice-box {
-            background-color: #0f172a;
-            font-family: 'Courier New', Courier, monospace;
+        /* Thermal Receipt UI Area */
+        .receipt-container {
+            background-color: #fff;
+            color: #000;
             padding: 15px;
             border-radius: 4px;
-            white-space: pre-wrap;
-            font-size: 14px;
-            border: 1px dashed #334155;
-            margin-top: 10px;
+            max-width: 320px;
+            margin: 10px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* PRINT STYLES: Hides everything except the thermal receipt when printing */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #thermalReceipt, #thermalReceipt * {
+                visibility: visible;
+            }
+            #thermalReceipt {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-width: 58mm; /* Standard Thermal Size */
+                padding: 0;
+                margin: 0;
+                box-shadow: none;
+                background-color: #fff;
+                color: #000;
+                font-size: 12px;
+            }
+            /* Reset borders for print text clarity */
+            #thermalReceipt table, #thermalReceipt th, #thermalReceipt td {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+                font-size: 11px !important;
+                padding: 4px !important;
+            }
         }
     </style>
 </head>
@@ -126,6 +151,7 @@
 
     <div class="container">
         
+        <!-- SECTION 1: PRODUCT MASTER -->
         <div class="card">
             <h3>PRODUCT MASTER (মালের রেট ও স্টক লিস্ট)</h3>
             <div class="table-responsive">
@@ -134,10 +160,10 @@
                         <tr>
                             <th>Item Name</th>
                             <th>UOM</th>
-                            <th>Purchase Rate</th>
-                            <th>Retail Rate</th>
-                            <th>Wholesale Rate</th>
-                            <th>Wastage (kg)</th>
+                            <th>Purchase</th>
+                            <th>Retail</th>
+                            <th>Wholesale</th>
+                            <th>Wastage</th>
                         </tr>
                     </thead>
                     <tbody id="productMasterBody"></tbody>
@@ -149,11 +175,11 @@
                 <div class="grid-2">
                     <div>
                         <label>Item Name</label>
-                        <input type="text" id="pName" placeholder="e.g., LIVE CHICKEN">
+                        <input type="text" id="pName" placeholder="LIVE CHICKEN">
                     </div>
                     <div>
                         <label>Unit (UOM)</label>
-                        <select id="pUom"><option>KGS</option><option>PCS</option></select>
+                        <select id="pUom"><option>kg</option><option>pcs</option></select>
                     </div>
                 </div>
                 <div class="grid-2">
@@ -180,15 +206,13 @@
             </div>
         </div>
 
+        <!-- SECTION 2: BILLING GENERATOR -->
         <div class="card">
             <h3>RETAIL & WHOLESALE BILLING (বিল তৈরি)</h3>
-            <label>Customer Name</label>
-            <input type="text" id="custName" placeholder="Cash Customer">
-
             <div class="grid-2">
                 <div>
-                    <label>Select Item</label>
-                    <select id="billItem" onchange="autoFillRate()"></select>
+                    <label>Customer Name</label>
+                    <input type="text" id="custName" placeholder="Cash Customer">
                 </div>
                 <div>
                     <label>Rate Type</label>
@@ -201,71 +225,144 @@
 
             <div class="grid-2">
                 <div>
-                    <label>Weight / Qty</label>
-                    <input type="number" id="weight" step="0.01" placeholder="0.00">
+                    <label>Select Item</label>
+                    <select id="billItem" onchange="autoFillRate()"></select>
                 </div>
                 <div>
-                    <label>Rate (₹)</label>
-                    <input type="number" id="rate" placeholder="0">
+                    <label>Weight / Qty</label>
+                    <input type="number" id="weight" step="0.001" placeholder="0.000">
                 </div>
             </div>
 
             <div class="grid-2">
                 <div>
+                    <label>Rate (₹)</label>
+                    <input type="number" id="rate" placeholder="0">
+                </div>
+                <div>
                     <label>Discount (%)</label>
                     <input type="number" id="discount" value="0">
                 </div>
-                <div>
-                    <label>GST / Tax (%)</label>
-                    <input type="number" id="tax" value="0">
+            </div>
+            
+            <label>GST / Tax (%)</label>
+            <input type="number" id="tax" value="0">
+
+            <div class="grid-2">
+                <button class="btn btn-warning" onclick="addToCart()">+ Add Item To Bill</button>
+                <button class="btn btn-danger" onclick="clearCart()">Clear Current Bill</button>
+            </div>
+        </div>
+
+        <!-- SECTION 3: THERMAL SLIP VIEW (Like image 293900.jpg) -->
+        <div class="card" style="background-color:#0f172a;">
+            <h3 style="color:#fff;">LIVE THERMAL INVOICE PREVIEW</h3>
+            
+            <!-- Real Thermal Paper Design Box Starts -->
+            <div class="receipt-container" id="thermalReceipt" style="font-family: 'Courier New', Courier, monospace; color: #000; background: #fff; line-height: 1.3;">
+                <div style="text-align: center; font-size: 15px; font-weight: bold; margin-bottom: 2px;">THREE BROTHERS FRESH CHICKEN</div>
+                <div style="text-align: center; font-size: 11px; font-weight: normal; margin-bottom: 8px; border-bottom: 1px dashed #000; padding-bottom: 5px;">
+                    THREE BROTHERS FARMS PVT LTD<br>
+                    Shop: Near Chicken Market Road<br>
+                    GSTIN NO: 36AADCS4014J1ZH<br>
+                    Contact No: 9390509343
+                </div>
+                
+                <div style="font-size: 11px; margin-bottom: 5px;">
+                    <span id="invoiceBillNo">Bill: TB-1001</span><br>
+                    Date: <span id="invoiceDate">31/05/2026</span> &nbsp; Time: <span id="invoiceTime">02:01PM</span>
+                </div>
+                <div style="text-align: center; font-weight: bold; font-size: 11px; margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom: 3px;">
+                    Receipt Cum Bill Of Supply/Tax Invoice
+                </div>
+
+                <!-- Receipt Table like 293900.jpg -->
+                <table style="width: 100%; border-collapse: collapse; color: #000; font-size: 11px; margin-top: 5px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
+                            <th style="text-align: left; padding: 3px 0; color:#000;">Item</th>
+                            <th style="text-align: center; color:#000;">Unit</th>
+                            <th style="text-align: right; color:#000;">Pri. Qty</th>
+                            <th style="text-align: right; color:#000;">Rate</th>
+                            <th style="text-align: right; color:#000;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiptItemsBody">
+                        <!-- Items will generate here -->
+                    </tbody>
+                </table>
+
+                <div style="border-top: 1px solid #000; margin-top: 5px; padding-top: 3px; font-size: 11px; text-align: right; font-weight: bold;">
+                    Total (Rs.): <span id="invoiceSubtotal">0.00</span>
+                </div>
+
+                <div style="margin-top: 10px; font-size: 11px; border-top: 1px dashed #000; padding-top: 5px;">
+                    Discount Amt: <span id="invoiceDiscount">0.00</span><br>
+                    CGST Amt (2.5%): <span id="invoiceCgst">0.00</span><br>
+                    SGST Amt (2.5%): <span id="invoiceSgst">0.00</span><br>
+                    <div style="font-size: 13px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 3px;">
+                        NET AMOUNT: ₹<span id="invoiceNet">0.00</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; font-size: 11px; margin-top: 15px; border-top: 1px dashed #000; padding-top: 5px; font-weight: bold;">
+                    &lt;Kitchen Kitchen Lo THREE BROTHERS Chicken
                 </div>
             </div>
+            <!-- Real Thermal Paper Design Box Ends -->
 
-            <button class="btn btn-success" onclick="generateBill()">GENERATE BILL</button>
+            <button class="btn btn-success" style="max-width:320px; margin: 10px auto; display:block;" onclick="printInvoice()">PRINT THERMAL SLIP</button>
         </div>
 
+        <!-- SECTION 4: SALES & PROFIT REPORTS -->
         <div class="card">
-            <h3>LIVE RECEIPT</h3>
-            <div class="invoice-box" id="invoice">বিল তৈরি করতে উপরে তথ্য দিন...</div>
-            <button class="btn" style="background-color: #0088FF; color: #fff;" onclick="window.print()">PRINT INVOICE</button>
-        </div>
-
-        <div class="card">
-            <h3>DAILY SALES REPORT (আজকের মোট বিক্রি) <button class="btn btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="clearSales()">Clear</button></h3>
+            <h3>BUSINESS REPORTS & ACCOUNTING <button class="btn btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="clearSales()">Reset Day</button></h3>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
+                            <th>Bill No</th>
                             <th>Time</th>
                             <th>Customer</th>
-                            <th>Item</th>
-                            <th>Weight</th>
-                            <th>Amount</th>
+                            <th>Net Amount</th>
                         </tr>
                     </thead>
                     <tbody id="salesTableBody"></tbody>
                 </table>
             </div>
-            <div style="font-size: 18px; font-weight: bold; color: #4ade80; text-align: right; margin-top: 15px;" id="totalSalesDisplay">TOTAL SALES: ₹0.00</div>
+            <div style="margin-top: 15px; text-align: right; font-size: 15px;">
+                <div style="color: #4ade80; font-weight: bold;">TOTAL SALES: ₹<span id="totalSalesDisplay">0.00</span></div>
+                <div style="color: #38bdf8; font-weight: bold; margin-top: 4px;">NET PROFIT TODAY: ₹<span id="totalProfitDisplay">0.00</span></div>
+            </div>
         </div>
 
     </div>
 
     <script>
         let defaultProducts = [
-            { name: "LIVE CHICKEN", uom: "KGS", purchase: 110, retail: 150, wholesale: 140, wastage: 0.000 },
-            { name: "DRESSED CHICKEN", uom: "KGS", purchase: 140, retail: 190, wholesale: 180, wastage: 0.400 },
-            { name: "BONELESS CHICKEN", uom: "KGS", purchase: 180, retail: 240, wholesale: 220, wastage: 1.200 },
-            { name: "EGG", uom: "PCS", purchase: 5, retail: 7, wholesale: 6, wastage: 0.000 }
+            { name: "LIVE CHICKEN", uom: "kg", purchase: 150, retail: 190, wholesale: 160, wastage: 0.000 },
+            { name: "DRESSED CHICKEN", uom: "kg", purchase: 200, retail: 250, wholesale: 230, wastage: 0.400 },
+            { name: "BONELESS CHICKEN", uom: "kg", purchase: 250, retail: 320, wholesale: 300, wastage: 1.200 },
+            { name: "EGG", uom: "pcs", purchase: 5, retail: 7, wholesale: 6, wastage: 0.000 }
         ];
 
-        let products = JSON.parse(localStorage.getItem('tb_products')) || defaultProducts;
-        let salesHistory = JSON.parse(localStorage.getItem('tb_sales')) || [];
+        let products = JSON.parse(localStorage.getItem('tb_products_v2')) || defaultProducts;
+        let salesHistory = JSON.parse(localStorage.getItem('tb_sales_v2')) || [];
+        let currentCart = [];
+        let nextBillNumber = localStorage.getItem('tb_bill_no') ? parseInt(localStorage.getItem('tb_bill_no')) : 13165;
 
         renderProductMaster();
         renderDropdown();
         updateSalesTable();
         autoFillRate();
+        initLiveDate();
+
+        function initLiveDate() {
+            let now = new Date();
+            document.getElementById('invoiceDate').innerText = now.getDate().toString().padStart(2, '0') + '/' + (now.getMonth()+1).toString().padStart(2, '0') + '/' + now.getFullYear();
+            document.getElementById('invoiceTime').innerText = now.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            document.getElementById('invoiceBillNo').innerText = "Bill :HTNM-" + nextBillNumber;
+        }
 
         function toggleAddProduct() {
             let form = document.getElementById('addProductForm');
@@ -321,7 +418,7 @@
                 products.push({ name, uom, purchase, retail, wholesale, wastage });
             }
 
-            localStorage.setItem('tb_products', JSON.stringify(products));
+            localStorage.setItem('tb_products_v2', JSON.stringify(products));
             renderProductMaster();
             renderDropdown();
             autoFillRate();
@@ -333,78 +430,54 @@
             document.getElementById('pWhole').value = "";
         }
 
-        function generateBill() {
-            let name = document.getElementById('custName').value || "Cash Customer";
-            let type = document.getElementById('billItem').value;
-            let rateMode = document.getElementById('rateType').value.toUpperCase();
+        // Add Multi-Item to Cart
+        function addToCart() {
+            let itemName = document.getElementById('billItem').value;
             let weight = parseFloat(document.getElementById('weight').value) || 0;
             let rate = parseFloat(document.getElementById('rate').value) || 0;
-            let discountPct = parseFloat(document.getElementById('discount').value) || 0;
-            let taxPct = parseFloat(document.getElementById('tax').value) || 0;
+            
+            if(weight <= 0 || rate <= 0) { alert("Please enter valid weight and rate!"); return; }
 
-            if(weight <= 0 || rate <= 0) { alert("Enter valid weight and rate!"); return; }
+            let product = products.find(p => p.name === itemName);
+            let amount = weight * rate;
+            let costPrice = product ? product.purchase * weight : 0;
+            let profit = amount - costPrice;
 
-            let subtotal = weight * rate;
-            let discountAmount = (subtotal * discountPct) / 100;
-            let taxableAmount = subtotal - discountAmount;
-            let taxAmount = (taxableAmount * taxPct) / 100;
-            let netTotal = taxableAmount + taxAmount;
-
-            let now = new Date();
-            let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-            let dateStr = now.getDate() + '-' + (now.getMonth()+1) + '-' + now.getFullYear() + ' ' + timeStr;
-
-            let bill = `  THREE BROTHERS FRESH CHICKEN\n`;
-            bill += `       Retail & Wholesale\n`;
-            bill += `   Date: ${dateStr}\n`;
-            bill += `===============================\n`;
-            bill += ` Customer : ${name}\n`;
-            bill += ` Rate Type: ${rateMode}\n`;
-            bill += `-------------------------------\n`;
-            bill += ` Item     : ${type}\n`;
-            bill += ` Weight   : ${weight} kg\n`;
-            bill += ` Rate     : ₹${rate.toFixed(2)}\n`;
-            bill += `-------------------------------\n`;
-            bill += ` Sub Total: ₹${subtotal.toFixed(2)}\n`;
-            if(discountAmount > 0) bill += ` Discount : -₹${discountAmount.toFixed(2)}\n`;
-            if(taxAmount > 0) bill += ` GST/Tax  : +₹${taxAmount.toFixed(2)}\n`;
-            bill += `-------------------------------\n`;
-            bill += ` NET TOTAL: ₹ ${netTotal.toFixed(2)}\n`;
-            bill += `===============================\n`;
-            bill += `    Thank You! Visit Again.`;
-
-            document.getElementById('invoice').innerText = bill;
-
-            salesHistory.push({ time: timeStr, customer: name, item: type, weight: weight + " kg", total: netTotal });
-            localStorage.setItem('tb_sales', JSON.stringify(salesHistory));
-            updateSalesTable();
-        }
-
-        function updateSalesTable() {
-            let tbody = document.getElementById('salesTableBody');
-            tbody.innerHTML = "";
-            let grandTotal = 0;
-            salesHistory.forEach(s => {
-                grandTotal += s.total;
-                tbody.innerHTML += `<tr>
-                    <td>${s.time}</td>
-                    <td>${s.customer}</td>
-                    <td>${s.item}</td>
-                    <td>${s.weight}</td>
-                    <td style="font-weight:bold; color:#4ade80;">₹${s.total.toFixed(2)}</td>
-                </tr>`;
+            currentCart.push({
+                name: itemName,
+                uom: product ? product.uom : 'kg',
+                weight: weight,
+                rate: rate,
+                amount: amount,
+                profit: profit
             });
-            document.getElementById('totalSalesDisplay').innerText = `TOTAL SALES: ₹${grandTotal.toFixed(2)}`;
+
+            renderThermalInvoice();
+            // Clear weight input for next item
+            document.getElementById('weight').value = "";
         }
 
-        function clearSales() {
-            if(confirm("আজকের বিক্রির খাতা কি নতুন করতে চান?")) {
-                salesHistory = [];
-                localStorage.removeItem('tb_sales');
-                updateSalesTable();
-            }
+        function clearCart() {
+            currentCart = [];
+            renderThermalInvoice();
         }
-    </script>
-</body>
-                      </html>
-                      
+
+        // Render Slip UI exactly like 293900.jpg
+        function renderThermalInvoice() {
+            initLiveDate();
+            let tbody = document.getElementById('receiptItemsBody');
+            tbody.innerHTML = "";
+
+            let subtotal = 0;
+            let totalProfit = 0;
+
+            currentCart.forEach(item => {
+                subtotal += item.amount;
+                totalProfit += item.profit;
+                
+                let row = `<tr style="border-bottom: 1px dashed #eee;">
+                    <td style="padding: 4px 0; max-width: 90px; word-wrap: break-word;">${item.name}</td>
+                    <td style="text-align: center;">${item.uom}</td>
+                    <td style="text-align: right;">${item.weight.toFixed(3)}</td>
+                    <td style="text-align: right;">${item.rate.toFixed(2)}</td>
+  
