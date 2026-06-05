@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THREE BROTHERS FRESH CHICKEN - ADVANCED POS</title>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+        }
+        .header {
+            text-align: center;
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 22px;
+            padding: 12px 0;
+            border-bottom: 2px solid #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .card {
+            background-color: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #38bdf8;
+            font-size: 15px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        label {
+            display: block;
+            margin-top: 8px;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 15px;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+        .btn-success { background-color: #4ade80; color: #0f172a; }
+        .btn-danger { background-color: #f87171; color: #fff; }
+        
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #334155;
+        }
+        th {
+            background-color: #0f172a;
+            color: #38bdf8;
+            white-space: nowrap;
+        }
+        tr:nth-child(even) { background-color: #1e293b; }
+        tr:hover { background-color: #24344d; }
+
+        .invoice-box {
+            background-color: #0f172a;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 14px;
+            border: 1px dashed #334155;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">THREE BROTHERS FRESH CHICKEN</div>
+
+    <div class="container">
+        
+        <div class="card">
+            <h3>PRODUCT MASTER (মালের রেট ও স্টক লিস্ট)</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>UOM</th>
+                            <th>Purchase Rate</th>
+                            <th>Retail Rate</th>
+                            <th>Wholesale Rate</th>
+                            <th>Wastage (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productMasterBody"></tbody>
+                </table>
+            </div>
+            <button class="btn" style="background-color: #64748b; color: #fff; font-size:12px; padding:8px; margin-top:10px;" onclick="toggleAddProduct()">+ Add / Update Product Price</button>
+            
+            <div id="addProductForm" style="display: none; margin-top: 10px; border-top: 1px dashed #334155; padding-top: 10px;">
+                <div class="grid-2">
+                    <div>
+                        <label>Item Name</label>
+                        <input type="text" id="pName" placeholder="e.g., LIVE CHICKEN">
+                    </div>
+                    <div>
+                        <label>Unit (UOM)</label>
+                        <select id="pUom"><option>KGS</option><option>PCS</option></select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <label>Purchase Rate (₹)</label>
+                        <input type="number" id="pPurchase" placeholder="0">
+                    </div>
+                    <div>
+                        <label>Retail Rate (₹)</label>
+                        <input type="number" id="pRetail" placeholder="0">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div>
+                        <label>Wholesale Rate (₹)</label>
+                        <input type="number" id="pWhole" placeholder="0">
+                    </div>
+                    <div>
+                        <label>Wastage (kg/pcs)</label>
+                        <input type="number" id="pWaste" value="0.000" step="0.001">
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="saveProductMaster()">Save Item to Master List</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>RETAIL & WHOLESALE BILLING (বিল তৈরি)</h3>
+            <label>Customer Name</label>
+            <input type="text" id="custName" placeholder="Cash Customer">
+
+            <div class="grid-2">
+                <div>
+                    <label>Select Item</label>
+                    <select id="billItem" onchange="autoFillRate()"></select>
+                </div>
+                <div>
+                    <label>Rate Type</label>
+                    <select id="rateType" onchange="autoFillRate()">
+                        <option value="retail">Retail Rate</option>
+                        <option value="wholesale">Wholesale Rate</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <label>Weight / Qty</label>
+                    <input type="number" id="weight" step="0.01" placeholder="0.00">
+                </div>
+                <div>
+                    <label>Rate (₹)</label>
+                    <input type="number" id="rate" placeholder="0">
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <label>Discount (%)</label>
+                    <input type="number" id="discount" value="0">
+                </div>
+                <div>
+                    <label>GST / Tax (%)</label>
+                    <input type="number" id="tax" value="0">
+                </div>
+            </div>
+
+            <button class="btn btn-success" onclick="generateBill()">GENERATE BILL</button>
+        </div>
+
+        <div class="card">
+            <h3>LIVE RECEIPT</h3>
+            <div class="invoice-box" id="invoice">বিল তৈরি করতে উপরে তথ্য দিন...</div>
+            <button class="btn" style="background-color: #0088FF; color: #fff;" onclick="window.print()">PRINT INVOICE</button>
+        </div>
+
+        <div class="card">
+            <h3>DAILY SALES REPORT (আজকের মোট বিক্রি) <button class="btn btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="clearSales()">Clear</button></h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Customer</th>
+                            <th>Item</th>
+                            <th>Weight</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody"></tbody>
+                </table>
+            </div>
+            <div style="font-size: 18px; font-weight: bold; color: #4ade80; text-align: right; margin-top: 15px;" id="totalSalesDisplay">TOTAL SALES: ₹0.00</div>
+        </div>
+
+    </div>
+
+    <script>
+        let defaultProducts = [
+            { name: "LIVE CHICKEN", uom: "KGS", purchase: 110, retail: 150, wholesale: 140, wastage: 0.000 },
+            { name: "DRESSED CHICKEN", uom: "KGS", purchase: 140, retail: 190, wholesale: 180, wastage: 0.400 },
+            { name: "BONELESS CHICKEN", uom: "KGS", purchase: 180, retail: 240, wholesale: 220, wastage: 1.200 },
+            { name: "EGG", uom: "PCS", purchase: 5, retail: 7, wholesale: 6, wastage: 0.000 }
+        ];
+
+        let products = JSON.parse(localStorage.getItem('tb_products')) || defaultProducts;
+        let salesHistory = JSON.parse(localStorage.getItem('tb_sales')) || [];
+
+        renderProductMaster();
+        renderDropdown();
+        updateSalesTable();
+        autoFillRate();
+
+        function toggleAddProduct() {
+            let form = document.getElementById('addProductForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function renderProductMaster() {
+            let tbody = document.getElementById('productMasterBody');
+            tbody.innerHTML = "";
+            products.forEach(p => {
+                tbody.innerHTML += `<tr>
+                    <td style="font-weight:bold; color:#38bdf8;">${p.name}</td>
+                    <td>${p.uom}</td>
+                    <td>₹${p.purchase}</td>
+                    <td style="color:#4ade80; font-weight:bold;">₹${p.retail}</td>
+                    <td style="color:#fbbf24;">₹${p.wholesale}</td>
+                    <td style="color:#f87171;">${p.wastage}</td>
+                </tr>`;
+            });
+        }
+
+        function renderDropdown() {
+            let dropdown = document.getElementById('billItem');
+            dropdown.innerHTML = "";
+            products.forEach(p => {
+                dropdown.innerHTML += `<option value="${p.name}">${p.name}</option>`;
+            });
+        }
+
+        function autoFillRate() {
+            let selectedName = document.getElementById('billItem').value;
+            let rateType = document.getElementById('rateType').value;
+            let product = products.find(p => p.name === selectedName);
+            if(product) {
+                document.getElementById('rate').value = rateType === 'retail' ? product.retail : product.wholesale;
+            }
+        }
+
+        function saveProductMaster() {
+            let name = document.getElementById('pName').value.toUpperCase();
+            let uom = document.getElementById('pUom').value;
+            let purchase = parseFloat(document.getElementById('pPurchase').value) || 0;
+            let retail = parseFloat(document.getElementById('pRetail').value) || 0;
+            let wholesale = parseFloat(document.getElementById('pWhole').value) || 0;
+            let wastage = parseFloat(document.getElementById('pWaste').value) || 0;
+
+            if(!name) { alert("Please enter product name!"); return; }
+
+            let index = products.findIndex(p => p.name === name);
+            if(index > -1) {
+                products[index] = { name, uom, purchase, retail, wholesale, wastage };
+            } else {
+                products.push({ name, uom, purchase, retail, wholesale, wastage });
+            }
+
+            localStorage.setItem('tb_products', JSON.stringify(products));
+            renderProductMaster();
+            renderDropdown();
+            autoFillRate();
+            toggleAddProduct();
+            
+            document.getElementById('pName').value = "";
+            document.getElementById('pPurchase').value = "";
+            document.getElementById('pRetail').value = "";
+            document.getElementById('pWhole').value = "";
+        }
+
+        function generateBill() {
+            let name = document.getElementById('custName').value || "Cash Customer";
+            let type = document.getElementById('billItem').value;
+            let rateMode = document.getElementById('rateType').value.toUpperCase();
+            let weight = parseFloat(document.getElementById('weight').value) || 0;
+            let rate = parseFloat(document.getElementById('rate').value) || 0;
+            let discountPct = parseFloat(document.getElementById('discount').value) || 0;
+            let taxPct = parseFloat(document.getElementById('tax').value) || 0;
+
+            if(weight <= 0 || rate <= 0) { alert("Enter valid weight and rate!"); return; }
+
+            let subtotal = weight * rate;
+            let discountAmount = (subtotal * discountPct) / 100;
+            let taxableAmount = subtotal - discountAmount;
+            let taxAmount = (taxableAmount * taxPct) / 100;
+            let netTotal = taxableAmount + taxAmount;
+
+            let now = new Date();
+            let timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            let dateStr = now.getDate() + '-' + (now.getMonth()+1) + '-' + now.getFullYear() + ' ' + timeStr;
+
+            let bill = `  THREE BROTHERS FRESH CHICKEN\n`;
+            bill += `       Retail & Wholesale\n`;
+            bill += `   Date: ${dateStr}\n`;
+            bill += `===============================\n`;
+            bill += ` Customer : ${name}\n`;
+            bill += ` Rate Type: ${rateMode}\n`;
+            bill += `-------------------------------\n`;
+            bill += ` Item     : ${type}\n`;
+            bill += ` Weight   : ${weight} kg\n`;
+            bill += ` Rate     : ₹${rate.toFixed(2)}\n`;
+            bill += `-------------------------------\n`;
+            bill += ` Sub Total: ₹${subtotal.toFixed(2)}\n`;
+            if(discountAmount > 0) bill += ` Discount : -₹${discountAmount.toFixed(2)}\n`;
+            if(taxAmount > 0) bill += ` GST/Tax  : +₹${taxAmount.toFixed(2)}\n`;
+            bill += `-------------------------------\n`;
+            bill += ` NET TOTAL: ₹ ${netTotal.toFixed(2)}\n`;
+            bill += `===============================\n`;
+            bill += `    Thank You! Visit Again.`;
+
+            document.getElementById('invoice').innerText = bill;
+
+            salesHistory.push({ time: timeStr, customer: name, item: type, weight: weight + " kg", total: netTotal });
+            localStorage.setItem('tb_sales', JSON.stringify(salesHistory));
+            updateSalesTable();
+        }
+
+        function updateSalesTable() {
+            let tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = "";
+            let grandTotal = 0;
+            salesHistory.forEach(s => {
+                grandTotal += s.total;
+                tbody.innerHTML += `<tr>
+                    <td>${s.time}</td>
+                    <td>${s.customer}</td>
+                    <td>${s.item}</td>
+                    <td>${s.weight}</td>
+                    <td style="font-weight:bold; color:#4ade80;">₹${s.total.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById('totalSalesDisplay').innerText = `TOTAL SALES: ₹${grandTotal.toFixed(2)}`;
+        }
+
+        function clearSales() {
+            if(confirm("আজকের বিক্রির খাতা কি নতুন করতে চান?")) {
+                salesHistory = [];
+                localStorage.removeItem('tb_sales');
+                updateSalesTable();
+            }
+        }
+    </script>
+</body>
+                      </html>
+                      
