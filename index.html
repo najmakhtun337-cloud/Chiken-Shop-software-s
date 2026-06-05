@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>THREE BROTHERS FRESH CHICKEN - FIXED POS</title>
+    <title>THREE BROTHERS FRESH CHICKEN - SECURE POS</title>
     <style>
         body {
             background-color: #0f172a;
@@ -113,7 +113,6 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* PRINT STYLES: Hides everything except thermal receipt */
         @media print {
             body * {
                 visibility: hidden;
@@ -183,17 +182,17 @@
                 <div class="grid-2">
                     <div>
                         <label>Purchase Rate (₹)</label>
-                        <input type="number" id="pPurchase" placeholder="0">
+                        <input type="number" id="pPurchase" value="0">
                     </div>
                     <div>
                         <label>Retail Rate (₹)</label>
-                        <input type="number" id="pRetail" placeholder="0">
+                        <input type="number" id="pRetail" value="0">
                     </div>
                 </div>
                 <div class="grid-2">
                     <div>
                         <label>Wholesale Rate (₹)</label>
-                        <input type="number" id="pWhole" placeholder="0">
+                        <input type="number" id="pWhole" value="0">
                     </div>
                     <div>
                         <label>Wastage (kg/pcs)</label>
@@ -235,16 +234,16 @@
             <div class="grid-2">
                 <div>
                     <label>Rate (₹)</label>
-                    <input type="number" id="rate" placeholder="0">
+                    <input type="number" id="rate" value="0">
                 </div>
                 <div>
                     <label>Discount (%)</label>
-                    <input type="number" id="discount" value="0">
+                    <input type="number" id="discount" value="0" oninput="renderThermalInvoice()">
                 </div>
             </div>
             
             <label>GST / Tax (%)</label>
-            <input type="number" id="tax" value="0">
+            <input type="number" id="tax" value="0" oninput="renderThermalInvoice()">
 
             <div class="grid-2">
                 <button class="btn btn-warning" onclick="addToCart()">+ Add Item To Bill</button>
@@ -267,7 +266,7 @@
                 
                 <div style="font-size: 11px; margin-bottom: 5px;">
                     <span id="invoiceBillNo">Bill: TB-13165</span><br>
-                    Date: <span id="invoiceDate">31/05/2026</span> &nbsp; Time: <span id="invoiceTime">02:01 PM</span>
+                    Date: <span id="invoiceDate">--/--/----</span> &nbsp; Time: <span id="invoiceTime">--:-- --</span>
                 </div>
                 <div style="text-align: center; font-weight: bold; font-size: 11px; margin: 5px 0; border-bottom: 1px dashed #000; padding-bottom: 3px;">
                     Receipt Cum Bill Of Supply/Tax Invoice
@@ -336,7 +335,7 @@
     </div>
 
     <script>
-        // Default products
+        // Default Core Setup
         const defaultProducts = [
             { name: "LIVE CHICKEN", uom: "kg", purchase: 150, retail: 190, wholesale: 160, wastage: 0.000 },
             { name: "DRESSED CHICKEN", uom: "kg", purchase: 200, retail: 250, wholesale: 230, wastage: 0.400 },
@@ -344,34 +343,60 @@
             { name: "EGG", uom: "pcs", purchase: 5, retail: 7, wholesale: 6, wastage: 0.000 }
         ];
 
-        // Core states
-        let products = JSON.parse(localStorage.getItem('tb_products_fixed')) || defaultProducts;
-        let salesHistory = JSON.parse(localStorage.getItem('tb_sales_fixed')) || [];
+        let products = defaultProducts;
+        let salesHistory = [];
         let currentCart = [];
-        let nextBillNumber = localStorage.getItem('tb_bill_no_fixed') ? parseInt(localStorage.getItem('tb_bill_no_fixed')) : 13165;
+        let nextBillNumber = 13165;
 
-        // Run UI initialization safely
-        window.onload = function() {
+        // Auto Recovery Logic: Tries to safely load localStorage data
+        try {
+            let localProd = localStorage.getItem('tb_products_fixed');
+            if (localProd) products = JSON.parse(localProd);
+
+            let localSales = localStorage.getItem('tb_sales_fixed');
+            if (localSales) salesHistory = JSON.parse(localSales);
+
+            let localBill = localStorage.getItem('tb_bill_no_fixed');
+            if (localBill) nextBillNumber = parseInt(localBill);
+        } catch (e) {
+            console.error("Local storage cleared due to old data mismatch:", e);
+            localStorage.clear(); // Clears broken data to avoid freeze
+        }
+
+        // Single Master Boot Event
+        function startApp() {
             renderProductMaster();
             renderDropdown();
             updateSalesTable();
             autoFillRate();
             initLiveDate();
-        };
+            renderThermalInvoice();
+        }
+
+        // Handle page binding safety
+        if (document.readyState === "complete" || document.readyState === "interactive") {
+            startApp();
+        } else {
+            document.addEventListener("DOMContentLoaded", startApp);
+        }
 
         function initLiveDate() {
             let now = new Date();
             let dateStr = now.getDate().toString().padStart(2, '0') + '/' + (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getFullYear();
             let timeStr = now.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
             
-            document.getElementById('invoiceDate').innerText = dateStr;
-            document.getElementById('invoiceTime').innerText = timeStr;
-            document.getElementById('invoiceBillNo').innerText = "Bill :HTNM-" + nextBillNumber;
+            let elDate = document.getElementById('invoiceDate');
+            let elTime = document.getElementById('invoiceTime');
+            let elBill = document.getElementById('invoiceBillNo');
+            
+            if(elDate) elDate.innerText = dateStr;
+            if(elTime) elTime.innerText = timeStr;
+            if(elBill) elBill.innerText = "Bill :HTNM-" + nextBillNumber;
         }
 
         function toggleAddProduct() {
             let form = document.getElementById('addProductForm');
-            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            if(form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
         }
 
         function renderProductMaster() {
@@ -401,13 +426,14 @@
 
         function autoFillRate() {
             let selectEl = document.getElementById('billItem');
-            if(!selectEl || selectEl.options.length === 0) return;
+            let rateEl = document.getElementById('rate');
+            if(!selectEl || !rateEl || selectEl.options.length === 0) return;
             
             let selectedName = selectEl.value;
             let rateType = document.getElementById('rateType').value;
             let product = products.find(p => p.name === selectedName);
             if(product) {
-                document.getElementById('rate').value = rateType === 'retail' ? product.retail : product.wholesale;
+                rateEl.value = rateType === 'retail' ? product.retail : product.wholesale;
             }
         }
 
@@ -435,50 +461,24 @@
             toggleAddProduct();
             
             document.getElementById('pName').value = "";
-            document.getElementById('pPurchase').value = "";
-            document.getElementById('pRetail').value = "";
-            document.getElementById('pWhole').value = "";
+            document.getElementById('pPurchase').value = "0";
+            document.getElementById('pRetail').value = "0";
+            document.getElementById('pWhole').value = "0";
             document.getElementById('pWaste').value = "0.000";
         }
 
         function addToCart() {
             let selectEl = document.getElementById('billItem');
+            let weightEl = document.getElementById('weight');
+            let rateEl = document.getElementById('rate');
+            
             if(!selectEl || selectEl.options.length === 0) { alert("No product selected!"); return; }
             
             let itemName = selectEl.value;
-            let weight = parseFloat(document.getElementById('weight').value) || 0;
-            let rate = parseFloat(document.getElementById('rate').value) || 0;
+            let weight = parseFloat(weightEl.value) || 0;
+            let rate = parseFloat(rateEl.value) || 0;
             
             if(weight <= 0 || rate <= 0) { alert("Please enter valid weight and rate!"); return; }
 
             let product = products.find(p => p.name === itemName);
-            let amount = weight * rate;
-            let costPrice = product ? product.purchase * weight : 0;
-            let profit = amount - costPrice;
-
-            currentCart.push({
-                name: itemName,
-                uom: product ? product.uom : 'kg',
-                weight: weight,
-                rate: rate,
-                amount: amount,
-                profit: profit
-            });
-
-            renderThermalInvoice();
-            document.getElementById('weight').value = "";
-        }
-
-        function clearCart() {
-            currentCart = [];
-            renderThermalInvoice();
-        }
-
-        function renderThermalInvoice() {
-            initLiveDate();
-            let tbody = document.getElementById('receiptItemsBody');
-            if(!tbody) return;
-            tbody.innerHTML = "";
-
-            if(currentCart.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 10px; color: #555;">No items add
+            
